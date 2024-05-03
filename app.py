@@ -44,9 +44,31 @@ def fetch_notion():
     response = requests.post(query_url, headers=headers)
     if response.status_code == 200:
         data = response.json()
-        return jsonify(data)
+        min_time_to_review = float('inf')
+        result_record = None
+
+        for page in data.get("results", []):
+            properties = page.get("properties", {})
+            time_to_review = properties.get("Time To Review", {}).get("number")
+            if time_to_review is not None and time_to_review < min_time_to_review:
+                min_time_to_review = time_to_review
+                result_record = {
+                    "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
+                    "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
+                }
+
+        if result_record:
+            result_record['min_time_to_review'] = min_time_to_review
+            return jsonify(result_record)
+ 
+        else:
+            return jsonify({"error": "No valid entries"}), response.status_code
+    
     else:
         return jsonify({"error": "Failed to fetch data"}), response.status_code
+
+## nu ik de de data heb, moet ik de lowest time to review vinden, en de corresponderende column. 
+
 
 
 if __name__ == '__main__':
