@@ -46,14 +46,20 @@ def fetch_notion():
         data = response.json()
         min_time_to_review = float('inf')
         result_record = None
+        # print(data["results[0]"])
 
-        for page in data.get("results", []):
-            properties = page.get("properties", {})
-            time_to_review = properties.get("Time To Review", {}).get("number")
+        for page in data["results"]:
+            properties = page["properties"]
+            time_to_review_object = properties["Time To Review"]
+            time_to_review_formula= time_to_review_object["formula"]
+            time_to_review = time_to_review_formula["number"]
+            print(properties["Title"])
+            input("Press Enter to continue...")
             if time_to_review is not None and time_to_review < min_time_to_review:
                 min_time_to_review = time_to_review
                 result_record = {
                     "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
+                    "title - link": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
                     "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
                 }
 
