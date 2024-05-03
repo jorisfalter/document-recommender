@@ -62,22 +62,51 @@ def fetch_notion():
         return jsonify({"error": "Failed to fetch data"}), response.status_code
 
 
-@app.route('/update_notion', methods=['POST'])
+# @app.route('/update_notion', methods=['PATCH'])
 def update_notion():
-    # Assuming JSON payload in the form of {"page_id": "...", "properties": {...}}
-    data = request.json
-    properties = data['properties']
+    # # Assuming JSON payload in the form of {"page_id": "...", "properties": {...}}
+    # data = request.json
+    # properties = data['properties']
 
-    update_url = f"https://api.notion.com/v1/pages/test-ui-29c5ec3ab47f4106862f472e7d709ae9"
+    # update_url = f"https://api.notion.com/v1/pages/test-ui-29c5ec3ab47f4106862f472e7d709ae9"
     
-    # Prepare the payload based on Notion API requirements
-    payload = {
-        "properties": properties
+    # # Prepare the payload based on Notion API requirements
+    # payload = {
+    #     "properties": properties
+    # }
+
+    # response = requests.patch(update_url, headers=headers, json=payload)
+    # return response.text
+
+    
+
+    # It should be a 32 character long string. Format this value by inserting hyphens (-) in the following pattern: 8-4-4-4-12 (each number is the length of characters between the hyphens).
+    # Example: 1429989fe8ac4effbc8f57f56486db54 becomes 1429989f-e8ac-4eff-bc8f-57f56486db54.
+
+    url = f"https://api.notion.com/v1/pages/29c5ec3a-b47f-4106-862f-472e7d709ae9"
+
+
+    headers = {
+        'Authorization': f'Bearer {NOTION_TOKEN}',
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
     }
 
-    response = requests.patch(update_url, headers=headers, json=payload)
-    return response.text
+    data = {
+        "properties": {
+            "title": {
+                "type": "title",
+                "title": [{ "type": "text", "text": { "content": "A note from your pals at Notion" } }]
+             }
+        }
+    }   
 
+    response = requests.patch(url, headers=headers, json=data)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    print(response.text)
+
+# Call the function
+update_notion()
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
