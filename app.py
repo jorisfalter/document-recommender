@@ -66,10 +66,9 @@ def fetch_notion():
 def update_notion():
     # Assuming JSON payload in the form of {"page_id": "...", "properties": {...}}
     data = request.json
-    page_id = data['page_id']
     properties = data['properties']
 
-    update_url = f"https://api.notion.com/v1/pages/{page_id}"
+    update_url = f"https://api.notion.com/v1/pages/test-ui-29c5ec3ab47f4106862f472e7d709ae9"
     
     # Prepare the payload based on Notion API requirements
     payload = {
