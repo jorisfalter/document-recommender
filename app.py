@@ -15,6 +15,43 @@ DATABASE_ID = os.getenv('DATABASE_ID')
 
 app = Flask(__name__)
 
+
+# first we check if any of the dates have been updated recently
+def check_if_new_date():
+    headers = {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    
+    url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
+    
+    # !! dit is text geen datum!
+    response = requests.get(url_reco1_last, headers=headers)
+    # print(response.json())
+    getParagraph = response.json()["paragraph"]
+    getRichText = getParagraph["rich_text"][0]
+    getText = getRichText["text"]
+    getContent = getText["content"]
+    print(getContent)
+
+
+    url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
+
+    response = requests.get(url_reco1_new, headers=headers)
+    print(response.json())
+
+  
+
+  
+    
+    # if response.status_code == 200:
+    #         print(response.json())
+    # else:
+    #     print("error")
+
+
+
 # @app.route('/fetch_notion', methods=['GET'])
 def fetch_notion():
     query_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
@@ -68,8 +105,118 @@ def fetch_notion():
         print("Failed to fetch data")
 
 
+def append_blocks_to_page_recommend_first():
 
-# fetching data to see what the json looks like
+    url = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
+    
+    headers = {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    # update the project title
+    data = {
+        # "children": [{
+        #     "object": "block",
+        #     "type": "paragraph",
+        "paragraph": {
+            "rich_text": [{
+                "type": "text",
+                "text": {
+                    "content": "Project Ideas"
+                },
+                "annotations": {
+                    "bold": True,
+                    "italic": False,
+                    "strikethrough": False,
+                    "underline": False,
+                    "code": False,
+                    "color": "yellow"
+                }
+            }]
+        }
+        # }]
+    }
+    
+    response = requests.patch(url, headers=headers, json=data)
+    print(response.text)
+
+    # update the date
+    url = f"https://api.notion.com/v1/blocks/1e38be9f-d9b3-4c70-9966-89439260613d"
+    
+    headers = {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    data = {
+        # "children": [{
+        #     "object": "block",
+        #     "type": "paragraph",
+        "paragraph": {
+            "rich_text": [{
+                "type": "mention",
+                "mention": {
+                    "type": "date",
+                    "date": {
+                        "start":"2024-03-01"
+                    }
+                }
+            }]
+        }
+        # }]
+    }
+
+    response = requests.patch(url, headers=headers, json=data)
+
+    return response.text
+
+## Call the functions
+# update_notion_title()
+# append_blocks_to_page_recommend_first()
+# fetch_data_for_testing()
+# fetch_notion()
+check_if_new_date()
+
+## run it in the browser
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
+
+
+################################# testing functions
+
+def append_blocks_to_page_test():
+    url = f"https://api.notion.com/v1/blocks/29c5ec3a-b47f-4106-862f-472e7d709ae9/children"
+    
+    headers = {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    data = {
+        "children": [{
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {
+                        "content": "You made this page using the Notion API. Pretty cool, huh? We hope you enjoy building with us."
+                    }
+                }]
+            }
+        }]
+    }
+    response = requests.patch(url, headers=headers, json=data)
+    # print(response.text)
+
+    return response.text
+
+# fetching data to see what the json looks like - for testing purposes only
 def fetch_data_for_testing():
     url = f"https://api.notion.com/v1/blocks/1e38be9f-d9b3-4c70-9966-89439260613d"
     
@@ -108,109 +255,3 @@ def update_notion_title():
 
     response = requests.patch(url, headers=headers, json=data)
     # print(response.text)
-
-
-def append_blocks_to_page_test():
-    url = f"https://api.notion.com/v1/blocks/29c5ec3a-b47f-4106-862f-472e7d709ae9/children"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-
-    data = {
-        "children": [{
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [{
-                    "type": "text",
-                    "text": {
-                        "content": "You made this page using the Notion API. Pretty cool, huh? We hope you enjoy building with us."
-                    }
-                }]
-            }
-        }]
-    }
-    response = requests.patch(url, headers=headers, json=data)
-    # print(response.text)
-
-    return response.text
-
-def append_blocks_to_page_recommend_first():
-
-    url = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-    data = {
-        # "children": [{
-        #     "object": "block",
-        #     "type": "paragraph",
-        "paragraph": {
-            "rich_text": [{
-                "type": "text",
-                "text": {
-                    "content": "Project Ideas"
-                },
-                "annotations": {
-                    "bold": True,
-                    "italic": False,
-                    "strikethrough": False,
-                    "underline": False,
-                    "code": False,
-                    "color": "yellow"
-                }
-            }]
-        }
-        # }]
-    }
-    
-    response = requests.patch(url, headers=headers, json=data)
-    print(response.text)
-
-    # now do the date
-    url = f"https://api.notion.com/v1/blocks/1e38be9f-d9b3-4c70-9966-89439260613d"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-    data = {
-        # "children": [{
-        #     "object": "block",
-        #     "type": "paragraph",
-        "paragraph": {
-            "rich_text": [{
-                "type": "mention",
-                "mention": {
-                    "type": "date",
-                    "date": {
-                        "start":"2024-03-01"
-                    }
-                }
-            }]
-        }
-        # }]
-    }
-
-    response = requests.patch(url, headers=headers, json=data)
-
-    return response.text
-
-## Call the functions
-# update_notion_title()
-# append_blocks_to_page_recommend_first()
-# fetch_data_for_testing()
-fetch_notion()
-
-## run it in the browser
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-
