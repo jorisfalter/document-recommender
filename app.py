@@ -26,7 +26,7 @@ def check_if_new_date():
     
     url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
     
-    # !! dit is text geen datum!
+    # !! dit is text geen datum maar een string
     response = requests.get(url_reco1_last, headers=headers)
     # print(response.json())
     getParagraph = response.json()["paragraph"]
@@ -35,20 +35,15 @@ def check_if_new_date():
     getContent = getText["content"]
     print(getContent)
 
-
+    # dit is wel een datum 
     url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
 
     response = requests.get(url_reco1_new, headers=headers)
     print(response.json())
 
-  
-
-  
-    
-    # if response.status_code == 200:
-    #         print(response.json())
-    # else:
-    #     print("error")
+    ## nu datums vergelijken, als ze gelijk zijn gelijk naar stap 3: eerste en tweede uit de tabel halen, anders eerst naar stap 2: de tabel updaten
+    ## dan ook voor de 2e recommendation
+    ## idealiter zouden we de "last review" in een meer leesbaar formaat houden
 
 
 
