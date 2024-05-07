@@ -17,6 +17,7 @@ DATABASE_ID = os.getenv('DATABASE_ID')
 
 
 # first we check if any of the dates have been updated recently
+# if they have been, we have to update the table
 def check_if_new_date():
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -70,17 +71,55 @@ def check_if_new_date():
             # eerst juist rij vinden
             # dan datum cell vinden
             # dan datum cell updaten
-
+            url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
+            response = requests.get(url_reco1_title, headers=headers)
+            getParagraph = response.json()["paragraph"]
+            getRichText = getParagraph["rich_text"][0]
+            getText = getRichText["text"]
+            docTitle = getText["content"]
+            print(docTitle)
+           
+            # now we fetch the row in the table
+            db_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
             data = {
-                "paragraph": {
-                    "rich_text": [{
-                        "text": {
-                            "content": newLast
-                        }
-                    }]
-                }
+                    "filter":{
+                        "and":[{
+                            "property": "Title",
+                            "rich_text": {
+                                "equals": docTitle
+                            }
+                        }]
+                    }
             }
-            response = requests.patch(url_reco1_last, headers=headers, json=data)
+            
+            response = requests.post(db_url, headers=headers, json=data)
+            # print(response.json())
+            if response.status_code == 200:
+                results = response.json().get("results", [])
+                if results:
+                    # Assuming the "Last Review" is a date property
+                    last_review_date = results[0]["properties"]["Last Review"]["date"]["start"]
+
+                    print(last_review_date)
+                    last_review_date_db = datetime.strptime(last_review_date, date_format)
+
+                    if newLastReviewDate > last_review_date_db:
+
+                        print("db date is lower than entered date - ok")
+                        return last_review_date
+
+                    else:
+                        print("db date is higher than entered date - error") 
+                else:
+                    return "No matching records found."
+                    print("error")
+            else:
+                return "Failed to fetch data: " + response.text
+                print("error")
+
+
+
+
             print("date changed")
 
         else: 
@@ -96,7 +135,7 @@ def check_if_new_date():
 
 
 
-# @app.route('/fetch_notion', methods=['GET'])
+# find the minimum time to review in the database
 def fetch_notion():
     query_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
     
@@ -132,9 +171,6 @@ def fetch_notion():
                 }
                 print(result_record)
 
-
-                # {'id': 'title', 'type': 'title', 'title': [{'type': 'text', 'text': {'content': 'Goals long term', 'link': None}, 'annotations': {'bold': False, 'italic': False, 'strikethrough': False, 'underline': False, 'code': False, 'color': 'default'}, 'plain_text': 'Goals long term', 'href': None}]}
-
         if result_record:
             result_record['min_time_to_review'] = min_time_to_review
             return json.dumps(result_record)  # Using json.dumps instead of jsonify
@@ -161,9 +197,7 @@ def append_blocks_to_page_recommend_first():
 
     # update the project title
     data = {
-        # "children": [{
-        #     "object": "block",
-        #     "type": "paragraph",
+
         "paragraph": {
             "rich_text": [{
                 "type": "text",
@@ -180,7 +214,7 @@ def append_blocks_to_page_recommend_first():
                 }
             }]
         }
-        # }]
+
     }
     
     response = requests.patch(url, headers=headers, json=data)
