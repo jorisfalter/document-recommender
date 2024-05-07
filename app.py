@@ -94,24 +94,53 @@ def check_if_new_date():
             
             response = requests.post(db_url, headers=headers, json=data)
             # print(response.json())
+            # input("Press Enter to continue...")
+
             if response.status_code == 200:
                 results = response.json().get("results", [])
-                if results:
-                    # Assuming the "Last Review" is a date property
-                    last_review_date = results[0]["properties"]["Last Review"]["date"]["start"]
+                # print(results)
+                cell_page_id = results[0]["id"]
+                print(cell_page_id)
+                # input("Press Enter to continue...")
 
+                if results:
+                    # "Last Review" is a date property, but I think it's stored in the variable as a string
+                    last_review_date = results[0]["properties"]["Last Review"]["date"]["start"]
                     print(last_review_date)
+                    # hence why we have to convert to a date
                     last_review_date_db = datetime.strptime(last_review_date, date_format)
+                    print(last_review_date_db)
 
                     if newLastReviewDate > last_review_date_db:
 
                         print("db date is lower than entered date - ok")
+                        print(newLastReviewDate.strftime('%Y-%m-%d'))
 
                         # hier moeten we de datum in de db updaten 
+                        cell_url = f"https://api.notion.com/v1/pages/{cell_page_id}"
+                        data = {
+                            "properties": {
+                                "Last Review": {  # This should match the exact name of the date property in Notion
+                                    "date": {
+                                        "start": newLastReviewDate.strftime('%Y-%m-%d'),
+                                        "end": None  # You can set an end date if applicable
+                                    }
+                                }
+                            }
+                        }
+
+                        response = requests.patch(cell_url, headers=headers, json=data)
+                        if response.status_code == 200:
+                            print("Date updated successfully.")
+                            return response.json()  # Returns the updated page object
+                        else:
+                            print("Failed to update date:", response.status_code)
+                            print(response.text)
+                            return None
+                        
                         # als dat gebeurd is kunnen we naar stap 3, de ui updaten (see below)
 
 
-                        return last_review_date
 
                     else:
                         print("db date is higher than entered date - error") 
