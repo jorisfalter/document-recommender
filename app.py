@@ -12,20 +12,30 @@ load_dotenv()
 NOTION_TOKEN = os.getenv('NOTION_TOKEN')
 DATABASE_ID = os.getenv('DATABASE_ID')
 
+
+## first URLs
+# last review
+url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
+# new last review date
+# dit is wel een datum in Notion maar hier in Python pakken we de plain text
+url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
+url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
+url_reco2_last = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
+url_reco2_new = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77"
+url_reco2_title = f"https://api.notion.com/v1/blocks/2dc01f9a-d57c-4dcd-9fc2-348f4685bf1a"
+
+
 # 1 first we check if any of the dates have been updated recently on the UI
 # 2 if they have been, we have to update the table
-def check_if_new_date():
+def check_if_new_date(url_reco_last,url_reco_new,url_reco_title):
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
         "Content-Type": "application/json",
         "Notion-Version": "2022-06-28"
     }
-    
-    # last review
-    url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
 
     # !! dit is text geen datum maar een string
-    response = requests.get(url_reco1_last, headers=headers)
+    response = requests.get(url_reco_last, headers=headers)
     # print(response.json())
     getParagraph = response.json()["paragraph"]
     getRichText = getParagraph["rich_text"][0]
@@ -33,11 +43,9 @@ def check_if_new_date():
     last = getText["content"]
     # print(type(getContent))
 
-    # new last review date
-    # dit is wel een datum in Notion maar hier in Python pakken we de plain text
-    url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
 
-    response = requests.get(url_reco1_new, headers=headers)
+
+    response = requests.get(url_reco_new, headers=headers)
     getParagraph = response.json()["paragraph"]
     getRichText = getParagraph["rich_text"][0]
     newLast = getRichText["plain_text"]
@@ -46,8 +54,7 @@ def check_if_new_date():
     if last == newLast:
         print("no changes to db")
     else:
-        
-        # Stap 2: de tabel updaten
+        ### Stap 2: de tabel updaten
         # convert both dates to string
         # The format of the date string
         date_format = "%Y-%m-%d"
@@ -57,15 +64,14 @@ def check_if_new_date():
             # eerst juist rij vinden
             # dan datum cell vinden
             # dan datum cell updaten
-            url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
-            response = requests.get(url_reco1_title, headers=headers)
+            response = requests.get(url_reco_title, headers=headers)
             getParagraph = response.json()["paragraph"]
             getRichText = getParagraph["rich_text"][0]
             getText = getRichText["text"]
             docTitle = getText["content"]
-            print(docTitle)
+            # print(docTitle)
            
-            # filter for the row in the table
+            # find the row in the table
             db_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
             data = {
                     "filter":{
@@ -84,20 +90,17 @@ def check_if_new_date():
                 results = response.json().get("results", [])
                 cell_page_id = results[0]["id"]
                 print(cell_page_id)
-                # input("Press Enter to continue...")
 
                 if results:
                     # "Last Review" is a date property, but I think it's stored in the variable as a string
                     last_review_date = results[0]["properties"]["Last Review"]["date"]["start"]
-                    print(last_review_date)
                     # hence why we have to convert to a date
                     last_review_date_db = datetime.strptime(last_review_date, date_format)
-                    print(last_review_date_db)
 
                     if newLastReviewDate > last_review_date_db:
 
-                        print("db date is lower than entered date - ok")
-                        print(newLastReviewDate.strftime('%Y-%m-%d'))
+                        # print("db date is lower than entered date - ok")
+                        # print(newLastReviewDate.strftime('%Y-%m-%d'))
 
                         # hier moeten we de datum in de db updaten 
                         cell_url = f"https://api.notion.com/v1/pages/{cell_page_id}"
@@ -120,8 +123,6 @@ def check_if_new_date():
                             print("Failed to update date:", response.status_code)
                             print(response.text)
                             return None
-                        
-                        # als dat gebeurd is kunnen we naar stap 3, de ui updaten (see below)
 
                     else:
                         print("db date is higher than entered date - error") 
@@ -138,7 +139,6 @@ def check_if_new_date():
             print("something wrong")
 
     ## dan ook voor de 2e recommendation
-    ## idealiter zouden we de "last review" in een meer leesbaar formaat houden
 
 # supporting function to update the Notion UI
 def patch_endpoint(field, url, data):
@@ -201,25 +201,15 @@ def fetch_db_entries():
                     }
 
         if result_record:
-            ## this adds the time delta to the object but I don't think I need this
-            # result_record['min_time_to_review'] = min_time_to_review
-            # result_record_second['min_time_to_review'] = second_min_time_to_review
             
             # print(result_record)
-            url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
             url_reco1_date = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
             url_reco1_date_last = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" # need this because it's not event based but cron based
 
             # print(result_record_second)
-            url_reco2_title = f"https://api.notion.com/v1/blocks/2dc01f9a-d57c-4dcd-9fc2-348f4685bf1a"
             url_reco2_date = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
             url_reco2_date_last = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
-                
-            # print(result_record["last_review_date"])
-            response = requests.get(url_reco1_date_last, headers=headers)
-            # print(response.json())
-            # response = requests.get(url_reco1_date, headers=headers)
-
+                 
             ### update title
             data = {
                 "paragraph": {
@@ -313,16 +303,17 @@ def fetch_db_entries():
 
 ##################################
 ## Call the functions
+
 while True:
-    print("updating DB")
-    check_if_new_date()
+    print("updating DB for first reco")
+    check_if_new_date(url_reco1_last,url_reco1_new,url_reco1_title)
+    print("updating DB for second reco")
+    check_if_new_date(url_reco2_last,url_reco2_new,url_reco2_title)
     print("updating UI")
     fetch_db_entries()
     print("sleeping")
     time.sleep(15)  # Sleep for 15 seconds
-# append_blocks_to_page_recommend_first()
-# check_if_new_date()
-# fetch_db_entries()
+
 
 
 
