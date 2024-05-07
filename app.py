@@ -106,6 +106,11 @@ def check_if_new_date():
                     if newLastReviewDate > last_review_date_db:
 
                         print("db date is lower than entered date - ok")
+
+                        # hier moeten we de datum in de db updaten 
+                        # als dat gebeurd is kunnen we naar stap 3, de ui updaten (see below)
+
+
                         return last_review_date
 
                     else:
