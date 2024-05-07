@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime
-
+import time
 import os
 from dotenv import load_dotenv
 
@@ -12,7 +12,7 @@ load_dotenv()
 NOTION_TOKEN = os.getenv('NOTION_TOKEN')
 DATABASE_ID = os.getenv('DATABASE_ID')
 
-# 1 first we check if any of the dates have been updated recently
+# 1 first we check if any of the dates have been updated recently on the UI
 # 2 if they have been, we have to update the table
 def check_if_new_date():
     headers = {
@@ -33,7 +33,6 @@ def check_if_new_date():
     last = getText["content"]
     # print(type(getContent))
 
-
     # new last review date
     # dit is wel een datum in Notion maar hier in Python pakken we de plain text
     url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
@@ -42,27 +41,19 @@ def check_if_new_date():
     getParagraph = response.json()["paragraph"]
     getRichText = getParagraph["rich_text"][0]
     newLast = getRichText["plain_text"]
-    # print(type(getPlainText))
-
-    print(last)
-    print(newLast)
 
     ## nu datums vergelijken
     if last == newLast:
-        print("same")
+        print("no changes to db")
     else:
         
-        # naar stap 2: de tabel updaten
-        print("different")
+        # Stap 2: de tabel updaten
         # convert both dates to string
         # The format of the date string
         date_format = "%Y-%m-%d"
         lastReview = datetime.strptime(last, date_format)
         newLastReviewDate = datetime.strptime(newLast, date_format)
-        # print(type(lastReview))
-        # print(type(newLastReviewDate))
         if newLastReviewDate > lastReview:
-            ## IK MOET IN DE DB UPDATEN, NIET IN DE SHEET!
             # eerst juist rij vinden
             # dan datum cell vinden
             # dan datum cell updaten
@@ -149,7 +140,7 @@ def check_if_new_date():
     ## dan ook voor de 2e recommendation
     ## idealiter zouden we de "last review" in een meer leesbaar formaat houden
 
-
+# supporting function to update the Notion UI
 def patch_endpoint(field, url, data):
     headers = {
         "Authorization": "Bearer " + NOTION_TOKEN,
@@ -163,8 +154,6 @@ def patch_endpoint(field, url, data):
     else:
         print("Failed to update " + field, response.status_code)
         print(response.text)
-
-
 
 # 3 find the minimum time to review in the database and update the ui
 def fetch_db_entries():
@@ -322,71 +311,18 @@ def fetch_db_entries():
         return json.dumps({"error": "Failed to fetch data"}), response.status_code
 
 
-def append_blocks_to_page_recommend_first():
-
-    url = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-
-    # update the project title
-    data = {
-
-        "paragraph": {
-            "rich_text": [{
-                "type": "text",
-                "text": {
-                    "content": "Project Ideas"
-                },
-                "annotations": {
-                    "bold": True,
-                    "italic": False,
-                    "strikethrough": False,
-                    "underline": False,
-                    "code": False,
-                    "color": "yellow"
-                }
-            }]
-        }
-    }
-    
-    response = requests.patch(url, headers=headers, json=data)
-    print(response.text)
-
-    # update the date
-    url = f"https://api.notion.com/v1/blocks/1e38be9f-d9b3-4c70-9966-89439260613d"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-    data = {
-        "paragraph": {
-            "rich_text": [{
-                "type": "mention",
-                "mention": {
-                    "type": "date",
-                    "date": {
-                        "start":"2024-03-01"
-                    }
-                }
-            }]
-        }
-    }
-
-    response = requests.patch(url, headers=headers, json=data)
-
-    return response.text
-
 ##################################
 ## Call the functions
+while True:
+    print("updating DB")
+    check_if_new_date()
+    print("updating UI")
+    fetch_db_entries()
+    print("sleeping")
+    time.sleep(15)  # Sleep for 15 seconds
 # append_blocks_to_page_recommend_first()
 # check_if_new_date()
-fetch_db_entries()
+# fetch_db_entries()
 
 
 
