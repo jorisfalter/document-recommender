@@ -89,7 +89,7 @@ def check_if_new_date(url_reco_last,url_reco_new,url_reco_title):
             if response.status_code == 200:
                 results = response.json().get("results", [])
                 cell_page_id = results[0]["id"]
-                print(cell_page_id)
+                # print(cell_page_id)
 
                 if results:
                     # "Last Review" is a date property, but I think it's stored in the variable as a string
