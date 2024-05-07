@@ -1,4 +1,3 @@
-# from flask import Flask, request, jsonify
 import requests
 import json
 from datetime import datetime
@@ -13,11 +12,8 @@ load_dotenv()
 NOTION_TOKEN = os.getenv('NOTION_TOKEN')
 DATABASE_ID = os.getenv('DATABASE_ID')
 
-# app = Flask(__name__)
-
-
-# first we check if any of the dates have been updated recently
-# if they have been, we have to update the table
+# 1 first we check if any of the dates have been updated recently
+# 2 if they have been, we have to update the table
 def check_if_new_date():
     headers = {
         "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -51,7 +47,6 @@ def check_if_new_date():
     print(last)
     print(newLast)
 
-
     ## nu datums vergelijken
     if last == newLast:
         print("same")
@@ -79,7 +74,7 @@ def check_if_new_date():
             docTitle = getText["content"]
             print(docTitle)
            
-            # now we fetch the row in the table
+            # filter for the row in the table
             db_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
             data = {
                     "filter":{
@@ -91,14 +86,11 @@ def check_if_new_date():
                         }]
                     }
             }
-            
             response = requests.post(db_url, headers=headers, json=data)
-            # print(response.json())
-            # input("Press Enter to continue...")
 
+            # after filtering, find the date in the db
             if response.status_code == 200:
                 results = response.json().get("results", [])
-                # print(results)
                 cell_page_id = results[0]["id"]
                 print(cell_page_id)
                 # input("Press Enter to continue...")
@@ -140,8 +132,6 @@ def check_if_new_date():
                         
                         # als dat gebeurd is kunnen we naar stap 3, de ui updaten (see below)
 
-
-
                     else:
                         print("db date is higher than entered date - error") 
                 else:
@@ -151,26 +141,33 @@ def check_if_new_date():
                 return "Failed to fetch data: " + response.text
                 print("error")
 
-
-
-
             print("date changed")
 
         else: 
             print("something wrong")
 
-
-
     ## dan ook voor de 2e recommendation
     ## idealiter zouden we de "last review" in een meer leesbaar formaat houden
 
 
-# Stap 3: eerste en tweede uit de tabel halen
+def patch_endpoint(field, url, data):
+    headers = {
+        "Authorization": "Bearer " + NOTION_TOKEN,
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    response = requests.patch(url, headers=headers, json=data)
+    if response.status_code == 200:
+            print(field + " updated successfully.")
+    else:
+        print("Failed to update " + field, response.status_code)
+        print(response.text)
 
 
 
-# find the minimum time to review in the database
-def fetch_notion():
+# 3 find the minimum time to review in the database and update the ui
+def fetch_db_entries():
     query_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
     
     headers = {
@@ -183,40 +180,146 @@ def fetch_notion():
     if response.status_code == 200:
         data = response.json()
         min_time_to_review = float('inf')
+        second_min_time_to_review = float('inf')  # Second smallest
         result_record = None
-        # print(data)
-        # print(data["results"])
+        result_record_second = None
+
 
         for page in data["results"]:
             properties = page["properties"]
             time_to_review_object = properties["Time To Review"]
             time_to_review_formula= time_to_review_object["formula"]
             time_to_review = time_to_review_formula["number"]
-            # print(properties["Title"])
-            # input("Press Enter to continue...")
-            if time_to_review is not None and time_to_review < min_time_to_review:
-                min_time_to_review = time_to_review
-                link_rich_text = properties.get("Link",{}).get("rich_text",[{}])
-                # link_rich_text_zero = link_rich_text[0]
-                result_record = {
-                    "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
-                    # "link": link_rich_text[0].get("plain_text",""),
-                    "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
-                }
-                print(result_record)
+
+            if time_to_review is not None:
+                if time_to_review < min_time_to_review:
+                    # Update second min to the old min
+                    second_min_time_to_review = min_time_to_review
+                    result_record_second = result_record
+
+                    # Update the min to the new lowest value
+                    min_time_to_review = time_to_review
+                    result_record = {
+                        "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
+                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
+                    }
+                elif time_to_review < second_min_time_to_review:
+                    # Update the second lowest value if this value is less than the second min but greater than min
+                    second_min_time_to_review = time_to_review
+                    result_record_second = {
+                        "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
+                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
+                    }
 
         if result_record:
-            result_record['min_time_to_review'] = min_time_to_review
-            return json.dumps(result_record)  # Using json.dumps instead of jsonify
-            print(result_record)
+            ## this adds the time delta to the object but I don't think I need this
+            # result_record['min_time_to_review'] = min_time_to_review
+            # result_record_second['min_time_to_review'] = second_min_time_to_review
+            
+            # print(result_record)
+            url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
+            url_reco1_date = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
+            url_reco1_date_last = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" # need this because it's not event based but cron based
+
+            # print(result_record_second)
+            url_reco2_title = f"https://api.notion.com/v1/blocks/2dc01f9a-d57c-4dcd-9fc2-348f4685bf1a"
+            url_reco2_date = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
+            url_reco2_date_last = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
+                
+            # print(result_record["last_review_date"])
+            response = requests.get(url_reco1_date_last, headers=headers)
+            # print(response.json())
+            # response = requests.get(url_reco1_date, headers=headers)
+
+            ### update title
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": result_record["title"]
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("first title", url_reco1_title, data)
+
+            ### update Last Review date
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": result_record["last_review_date"]
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("first last review date", url_reco1_date, data)
+
+            ### also update the New Last Review Date so these stay in sync 
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "mention": {
+                            "date": {
+                                "start": result_record["last_review_date"]
+                            }
+                        }
+                    }]
+                }
+            }
+            patch_endpoint("first new last review date", url_reco1_date_last, data)
+
+            ### update second title
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": result_record_second["title"]
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("second title", url_reco2_title, data)
+
+            ### update second Last Review date
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": result_record_second["last_review_date"]
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("second last review date", url_reco2_date, data)
+
+            ### also update second New Last Review Date so these stay in sync 
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "mention": {
+                            "date": {
+                                "start": result_record_second["last_review_date"]
+                            }
+                        }
+                    }]
+                }
+            }
+            patch_endpoint("second new last review date", url_reco2_date_last, data)
+
+            return json.dumps(result_record)  
  
         else:
-            return json.dumps({"error": "No valid entries"}), 404  # Error handling
             print("no valid entries")
-    
+            return json.dumps({"error": "No valid entries"}), 404  # Error handling
+
     else:
-        return json.dumps({"error": "Failed to fetch data"}), response.status_code
         print("Failed to fetch data")
+        return json.dumps({"error": "Failed to fetch data"}), response.status_code
 
 
 def append_blocks_to_page_recommend_first():
@@ -248,7 +351,6 @@ def append_blocks_to_page_recommend_first():
                 }
             }]
         }
-
     }
     
     response = requests.patch(url, headers=headers, json=data)
@@ -280,16 +382,13 @@ def append_blocks_to_page_recommend_first():
 
     return response.text
 
+##################################
 ## Call the functions
-# update_notion_title()
 # append_blocks_to_page_recommend_first()
-# fetch_data_for_testing()
-# fetch_notion()
-check_if_new_date()
+# check_if_new_date()
+fetch_db_entries()
 
-## run it in the browser
-# if __name__ == '__main__':
-#     app.run(debug=True)
+
 
 
 
