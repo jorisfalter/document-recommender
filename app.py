@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify
+# from flask import Flask, request, jsonify
 import requests
 import json
-
+from datetime import datetime
 
 import os
 from dotenv import load_dotenv
@@ -13,7 +13,7 @@ load_dotenv()
 NOTION_TOKEN = os.getenv('NOTION_TOKEN')
 DATABASE_ID = os.getenv('DATABASE_ID')
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 
 # first we check if any of the dates have been updated recently
@@ -24,38 +24,75 @@ def check_if_new_date():
         "Notion-Version": "2022-06-28"
     }
     
+    # last review
     url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
-    
+
     # !! dit is text geen datum maar een string
     response = requests.get(url_reco1_last, headers=headers)
     # print(response.json())
     getParagraph = response.json()["paragraph"]
     getRichText = getParagraph["rich_text"][0]
     getText = getRichText["text"]
-    getContent = getText["content"]
+    last = getText["content"]
     # print(type(getContent))
 
-    # dit is wel een datum 
+
+    # new last review date
+    # dit is wel een datum in Notion maar hier in Python pakken we de plain text
     url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
 
     response = requests.get(url_reco1_new, headers=headers)
     getParagraph = response.json()["paragraph"]
     getRichText = getParagraph["rich_text"][0]
-    getPlainText = getRichText["plain_text"]
+    newLast = getRichText["plain_text"]
     # print(type(getPlainText))
 
+    print(last)
+    print(newLast)
+
+
     ## nu datums vergelijken
-    if getContent == getPlainText:
-        # als ze gelijk zijn gelijk naar stap 3: eerste en tweede uit de tabel halen
+    if last == newLast:
         print("same")
     else:
-        # anders eerst naar stap 2: de tabel updaten
+        
+        # naar stap 2: de tabel updaten
         print("different")
+        # convert both dates to string
+        # The format of the date string
+        date_format = "%Y-%m-%d"
+        lastReview = datetime.strptime(last, date_format)
+        newLastReviewDate = datetime.strptime(newLast, date_format)
+        # print(type(lastReview))
+        # print(type(newLastReviewDate))
+        if newLastReviewDate > lastReview:
+            ## IK MOET IN DE DB UPDATEN, NIET IN DE SHEET!
+            # eerst juist rij vinden
+            # dan datum cell vinden
+            # dan datum cell updaten
+
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "text": {
+                            "content": newLast
+                        }
+                    }]
+                }
+            }
+            response = requests.patch(url_reco1_last, headers=headers, json=data)
+            print("date changed")
+
+        else: 
+            print("something wrong")
 
 
 
     ## dan ook voor de 2e recommendation
     ## idealiter zouden we de "last review" in een meer leesbaar formaat houden
+
+
+# Stap 3: eerste en tweede uit de tabel halen
 
 
 
@@ -158,9 +195,6 @@ def append_blocks_to_page_recommend_first():
         "Notion-Version": "2022-06-28"
     }
     data = {
-        # "children": [{
-        #     "object": "block",
-        #     "type": "paragraph",
         "paragraph": {
             "rich_text": [{
                 "type": "mention",
@@ -172,7 +206,6 @@ def append_blocks_to_page_recommend_first():
                 }
             }]
         }
-        # }]
     }
 
     response = requests.patch(url, headers=headers, json=data)
@@ -193,72 +226,3 @@ check_if_new_date()
 
 
 
-################################# testing functions
-
-def append_blocks_to_page_test():
-    url = f"https://api.notion.com/v1/blocks/29c5ec3a-b47f-4106-862f-472e7d709ae9/children"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-
-    data = {
-        "children": [{
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [{
-                    "type": "text",
-                    "text": {
-                        "content": "You made this page using the Notion API. Pretty cool, huh? We hope you enjoy building with us."
-                    }
-                }]
-            }
-        }]
-    }
-    response = requests.patch(url, headers=headers, json=data)
-    # print(response.text)
-
-    return response.text
-
-# fetching data to see what the json looks like - for testing purposes only
-def fetch_data_for_testing():
-    url = f"https://api.notion.com/v1/blocks/1e38be9f-d9b3-4c70-9966-89439260613d"
-    
-    headers = {
-        "Authorization": f"Bearer {NOTION_TOKEN}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-
-    response = requests.get(url, headers=headers)
-    # if response.status_code == 200:
-    print(response.json())
-            # return jsonify(response)
-
-
-
-## update title - not required - for testing purposes only
-# @app.route('/update_notion', methods=['PATCH'])
-def update_notion_title():
-    url = f"https://api.notion.com/v1/pages/29c5ec3a-b47f-4106-862f-472e7d709ae9"
-
-    headers = {
-        'Authorization': f'Bearer {NOTION_TOKEN}',
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28'
-    }
-
-    data = {
-        "properties": {
-            "title": {
-                "type": "title",
-                "title": [{ "type": "text", "text": { "content": "An update from your pals at Notion" } }]
-             }
-        }
-    }   
-
-    response = requests.patch(url, headers=headers, json=data)
-    # print(response.text)
