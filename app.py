@@ -305,15 +305,15 @@ def fetch_db_entries():
 ## Call the functions
 
 
-while True:
-    print("updating DB for first reco")
-    check_if_new_date(url_reco1_last,url_reco1_new,url_reco1_title)
-    print("updating DB for second reco")
-    check_if_new_date(url_reco2_last,url_reco2_new,url_reco2_title)
-    print("updating UI")
-    fetch_db_entries()
-    print("sleeping")
-    time.sleep(10)  # Sleep for 15 seconds
+# while True:
+print("updating DB for first reco")
+check_if_new_date(url_reco1_last,url_reco1_new,url_reco1_title)
+print("updating DB for second reco")
+check_if_new_date(url_reco2_last,url_reco2_new,url_reco2_title)
+print("updating UI")
+fetch_db_entries()
+print("sleeping")
+    # time.sleep(10)  # Sleep for 15 seconds
 
 
 
