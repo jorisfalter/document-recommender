@@ -313,7 +313,7 @@ while True:
     print("updating UI")
     fetch_db_entries()
     print("sleeping")
-time.sleep(10)  # Sleep for 15 seconds
+    time.sleep(10)  # Sleep for 15 seconds
 
 
 
