@@ -18,10 +18,12 @@ DATABASE_ID = os.getenv('DATABASE_ID')
 url_reco1_last = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
 # new last review date
 # dit is wel een datum in Notion maar hier in Python pakken we de plain text
-url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
+# url_reco1_new = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14"
+url_reco1_new = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80be-a005-e8e87a613209"
 url_reco1_title = f"https://api.notion.com/v1/blocks/026361d8-21fb-4494-9384-a1581eb5f5d0"
 url_reco2_last = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
-url_reco2_new = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77"
+# url_reco2_new = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77"
+url_reco2_new = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80a1-988a-dfa86cbd6af2"
 url_reco2_title = f"https://api.notion.com/v1/blocks/2dc01f9a-d57c-4dcd-9fc2-348f4685bf1a"
 
 
@@ -204,12 +206,14 @@ def fetch_db_entries():
             
             # print(result_record)
             url_reco1_date = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
-            url_reco1_date_last = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" # need this because it's not event based but cron based
+            # url_reco1_date_last = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" # need this because it's not event based but cron based
+            url_reco1_date_last = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80be-a005-e8e87a613209" # need this because it's not event based but cron based
 
             # print(result_record_second)
             url_reco2_date = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
-            url_reco2_date_last = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
-                 
+            # url_reco2_date_last = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
+            url_reco2_date_last = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80a1-988a-dfa86cbd6af2"
+
             ### update title
             data = {
                 "paragraph": {
