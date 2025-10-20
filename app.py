@@ -71,7 +71,7 @@ def check_if_new_date(url_reco_last,url_reco_new,url_reco_title):
             getRichText = getParagraph["rich_text"][0]
             getText = getRichText["text"]
             docTitle = getText["content"]
-            # print(docTitle)
+            print(f"Searching for title: '{docTitle}'")
            
             # find the row in the table
             db_url = f"https://api.notion.com/v1/databases/{DATABASE_ID}/query"
@@ -90,10 +90,12 @@ def check_if_new_date(url_reco_last,url_reco_new,url_reco_title):
             # after filtering, find the date in the db
             if response.status_code == 200:
                 results = response.json().get("results", [])
-                cell_page_id = results[0]["id"]
-                # print(cell_page_id)
+                print(f"Database query results: {len(results)} records found")
+                # print(f"Results: {results}")
 
                 if results:
+                    cell_page_id = results[0]["id"]
+                    # print(cell_page_id)
                     # "Last Review" is a date property, but I think it's stored in the variable as a string
                     last_review_date = results[0]["properties"]["Last Review"]["date"]["start"]
                     # hence why we have to convert to a date
@@ -129,8 +131,8 @@ def check_if_new_date(url_reco_last,url_reco_new,url_reco_title):
                     else:
                         print("db date is higher than entered date - error") 
                 else:
+                    print("Title Probably Changed; Fetching other item.")
                     return "No matching records found."
-                    print("error")
             else:
                 return "Failed to fetch data: " + response.text
                 print("error")
@@ -192,26 +194,28 @@ def fetch_db_entries():
                     min_time_to_review = time_to_review
                     result_record = {
                         "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
-                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
+                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start"),
+                        "review_period_months": properties.get("Review Period (months)", {}).get("number")
                     }
                 elif time_to_review < second_min_time_to_review:
                     # Update the second lowest value if this value is less than the second min but greater than min
                     second_min_time_to_review = time_to_review
                     result_record_second = {
                         "title": properties.get("Title", {}).get("title", [{}])[0].get("plain_text", ""),
-                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start")
+                        "last_review_date": properties.get("Last Review", {}).get("date", {}).get("start"),
+                        "review_period_months": properties.get("Review Period (months)", {}).get("number")
                     }
 
         if result_record:
             
             # print(result_record)
             url_reco1_date = f"https://api.notion.com/v1/blocks/d2b57791-2bce-4b60-bd3d-82cf11f2f4ce"
-            # url_reco1_date_last = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" # need this because it's not event based but cron based
+            url_reco1_period = f"https://api.notion.com/v1/blocks/466cdb80-63a6-4d05-b04f-ddb6d0672c14" 
             url_reco1_date_last = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80be-a005-e8e87a613209" # need this because it's not event based but cron based
 
             # print(result_record_second)
             url_reco2_date = f"https://api.notion.com/v1/blocks/32040b5a-b45c-471b-8ef3-b075853612cd"
-            # url_reco2_date_last = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
+            url_reco2_date_period = f"https://api.notion.com/v1/blocks/8505ec27-d3ef-401b-af9f-666458925c77" # need this because it's not event based but cron based
             url_reco2_date_last = f"https://api.notion.com/v1/blocks/28f4efa3-46ae-80a1-988a-dfa86cbd6af2"
 
             ### update title
@@ -254,6 +258,19 @@ def fetch_db_entries():
             }
             patch_endpoint("first new last review date", url_reco1_date_last, data)
 
+            ### update first Review Period
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": str(result_record["review_period_months"])
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("first review period", url_reco1_period, data)
+
             ### update second title
             data = {
                 "paragraph": {
@@ -293,6 +310,19 @@ def fetch_db_entries():
                 }
             }
             patch_endpoint("second new last review date", url_reco2_date_last, data)
+
+            ### update second Review Period
+            data = {
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": str(result_record_second["review_period_months"])
+                            }
+                        }]
+                }
+            }
+            patch_endpoint("second review period", url_reco2_date_period, data)
 
             return json.dumps(result_record)  
  
